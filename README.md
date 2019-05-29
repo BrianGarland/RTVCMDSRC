@@ -1,19 +1,18 @@
-**What is RTVCMDSRC?**
+# RTVCMDSRC
 
 RTVCMDSRC is a utility to recreate the source of a *CMD object. 
 
+### Installation 
 
-**Download with RELIC:**
+1. 'git clone' this repository
+2. Run 'gmake' (available from yum)
 
-This requires CRTMIPGM which can be found here: https://github.com/WorksOfBarry/CRTMIPGM
+### Usage instructions
 
-```
-RELICGET PLOC('https://bitbucket.org/BrianGarland/rtvcmdsrc/commits/751a44e2ab23') 
-PDIR('BrianGarland-rtvcmdsrc-751a44e2ab23') PNAME(#RTVCMDSRC)
-```
+1. 'ADDLIBLE RTVCMDSRC' (or whatever library you used)
+2) 'RTVCMDSRC' and prompt for parameters.  
 
-
-**License**
+### License
 
 Placed in public domain by Dave McKenzie.  
 
