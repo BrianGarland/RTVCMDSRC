@@ -8,8 +8,8 @@ RTVCMDSRC is a utility to recreate the source of a *CMD object.
 This requires CRTMIPGM which can be found here: https://github.com/WorksOfBarry/CRTMIPGM
 
 ```
-RELICGET PLOC('https://bitbucket.org/BrianGarland/rtvcmdsrc/commits/751a44e2ab23') 
-PDIR('BrianGarland-rtvcmdsrc-751a44e2ab23') PNAME(#RTVCMDSRC)
+RELICGET PLOC('https://github.com/BrianGarland/RTVCMDSRC/archive/master.zip') 
+PDIR('RTVCMDSRC') PNAME(#RTVCMDSRC)
 ```
 
 
