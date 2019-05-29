@@ -9,15 +9,8 @@ RTVCMDSRC is a utility to recreate the source of a *CMD object.
 
 ### Usage instructions
 
-<<<<<<< HEAD
 1. 'ADDLIBLE RTVCMDSRC' (or whatever library you used)
-2) 'RTVCMDSRC' and prompt for parameters.  
-=======
-```
-RELICGET PLOC('https://github.com/BrianGarland/RTVCMDSRC/archive/master.zip') 
-PDIR('RTVCMDSRC') PNAME(#RTVCMDSRC)
-```
->>>>>>> db67fd4d2364e4379604e0defc54b8dbe4d7b9f0
+2. 'RTVCMDSRC' and prompt for parameters.  
 
 ### License
 
