@@ -1,0 +1,23 @@
+RTVCMD.ZIP - Retrieve command source
+=============================================================
+
+2008/12/15
+
+Dave McKenzie
+Zbig Group, Inc.
+davemck@zbiggroup.com
+
+This freeware utility contains the command RTVCMDSRC, which allows you to
+retrieve source statements from an AS/400 command into a source file.
+Both IBM-supplied and user-defined commands may be retrieved.
+
+A separate command, RTVCMDMSG, is included which retrieves message
+descriptions from commands, for PROMPT and CHOICE parameters in which prompt
+text was derived from message descriptions when the command was created.
+RTVCMDMSG creates source for a CL program containing ADDMSGD commands to
+reconstruct a message file with the prompt message descriptions.
+
+The utility will run on V3R1 and up (including RISC) at all QSECURITY levels
+up to and including 50.
+
+It is in the public domain and source is included.

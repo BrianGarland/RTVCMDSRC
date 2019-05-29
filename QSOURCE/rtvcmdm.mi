@@ -1,0 +1,423 @@
+/*==================================================================*/
+/*  RTVCMD -- Retrieve Command Source                               */
+/*==================================================================*/
+/*                                                                  */
+/*  1997/11/16                                                      */
+/*                                                                  */
+/*  Dave McKenzie                                                   */
+/*  the zbig group, inc.                                            */
+/*                                                                  */
+/*  Internet:     davemck@zbiggroup.com                             */
+/*                                                                  */
+/*  This software is hereby placed in the public domain.            */
+/*                                                                  */
+/*  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR DIRECT, INDIRECT,    */
+/*  SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF    */
+/*  THE USE OF THIS SOFTWARE.                                       */
+/*                                                                  */
+/*  THE AUTHOR SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING,    */
+/*  BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF                   */
+/*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,              */
+/*  AND NON-INFRINGEMENT.  THIS SOFTWARE IS PROVIDED ON AN "AS IS"  */
+/*  BASIS, AND THE AUTHOR HAS NO OBLIGATION TO PROVIDE MAINTENANCE, */
+/*  SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.               */
+/*==================================================================*/
+
+         ENTRY  EXENTRY(EXENTOL) EXT;
+         DCL SPCPTR PARM1P PARM;
+         DCL OL EXENTOL (PARM1P) EXT PARM MIN(1);
+
+/* parameter   */
+         DCL SPC $PARMS BAS(PARM1P);
+         DCL DD $CMDNM   CHAR(10) DEF($PARMS) POS( 1);
+         DCL DD $CMDLI   CHAR(10) DEF($PARMS) POS(11);
+
+         DCL CON CUSPNAME CHAR(10) INIT('RTVCMDSPC');
+         DCL CON CUSPLIBR CHAR(10) INIT('QTEMP');
+         DCL CON SKIP     CHAR(2) INIT(X'3000');
+         DCL CON HANDLE   CHAR(2) INIT(X'B000');
+         DCL CON OP2ISCON CHAR(1) INIT(X'01');
+
+         DCL SYSPTR QTEMPPTR BASPCO POS(65);
+         DCL SYSPTR WORKSYP AUTO;
+         DCL SYSPTR CMDLSYP AUTO;
+         DCL SYSPTR CMDSYP AUTO;
+         DCL SPCPTR USPSPP AUTO;
+
+         DCL DD UCMDLI CHAR(10) AUTO;
+         DCL DD CMDSIZE BIN(4) AUTO BDRY(4) INIT(0);
+
+/* template for RSLVSP */
+         DCL DD OBJDESC CHAR(34) AUTO;
+         DCL DD TYPESUB CHAR(2)  DEF(OBJDESC) POS(1);
+         DCL DD OBJNAM  CHAR(30) DEF(OBJDESC) POS(3);
+         DCL DD *       CHAR(2)  DEF(OBJDESC) POS(33) INIT(X'0000');
+
+/* output template for MATPTR ins  */
+         DCL SPCPTR MTPTRPTR AUTO INIT(MTPTR);
+         DCL DD MTPTR CHAR(84) AUTO;
+         DCL DD MTPPROV  BIN(4) DEF(MTPTR) POS(1) INIT(84);
+         DCL DD MTPTYPE CHAR(1) DEF(MTPTR) POS(9) INIT(X'01') /* syp*/;
+         DCL DD MTPSPEC CHAR(75) DEF(MTPTR) POS(10);
+         DCL DD MTSYCTXN CHAR(30) DEF(MTPSPEC) POS(3);
+
+/* output template for MATS ins  */
+         DCL SPCPTR MATSTMPP AUTO INIT(MATSTMP);
+         DCL DD MATSTMP CHAR(96) AUTO BDRY(16);
+         DCL DD MATSPRV  BIN(4) DEF(MATSTMP) POS( 1) INIT(96);
+         DCL DD MATSSIZ  BIN(4) DEF(MATSTMP) POS(49);
+
+         DCL DD ERRCODE CHAR( 96) AUTO BDRY(4);
+         DCL DD ERRPROV  BIN(  4) DEF(ERRCODE) POS( 1) INIT(96);
+         DCL DD ERRAVAL  BIN(  4) DEF(ERRCODE) POS( 5);
+         DCL DD ERRMSID CHAR(  7) DEF(ERRCODE) POS( 9);
+         DCL DD ERRDATA CHAR( 80) DEF(ERRCODE) POS(17);
+
+         DCL DD  BIN2 BIN(2) AUTO BDRY(2);
+         DCL DD  BIN4 BIN(4) AUTO BDRY(4);
+
+         MODEXCPD BADCPFX,HANDLE,OP2ISCON;
+         MODEXCPD BADMCHX,HANDLE,OP2ISCON;
+
+         CPYBLA     UCMDLI,$CMDLI;
+         CMPBLAP(B) UCMDLI,'*CURLIB',' '/NEQ(AFISCURL);
+
+/*  ck existence of cur lib  */
+         CALLI      JOBI,*,JBIRTN;
+         CMPNV(B)   J07CURLIB,1/EQ(AFISCURL) /* B if is a *CURLIB */;
+         CPYBLAP    UCMDLI,'QGPL',' ';
+AFISCURL:
+
+/* Create a user space  */
+         CPYNV      USPSIZE, 32768;
+         CPYBLAP    USPNAME, CUSPNAME,' ';
+         CPYBLAP    USPLIBR, CUSPLIBR,' ';
+         CALLI      CRUSRSPC,*,USPRTN;
+
+/*  Get the cmd  */
+         CALLI      GETCMD,*,GCMDRTN;
+
+         B          THEEND;
+/*-------------------------------------*/
+BADCPF:
+         MODEXCPD BADCPFX,SKIP,OP2ISCON;
+         CALLI      RESEND,*,RSNDRTN;
+         B          THEEND;
+BADMCH:
+         MODEXCPD BADMCHX,SKIP,OP2ISCON;
+         CALLI      MOVMSGS,*,MOVMRTN;
+         B          THEEND;
+/*-------------------------------------*/
+THEEND:
+         RTX        *;
+/*---------------------------------------------------------*/
+         ENTRY RESEND INT;
+/*  Move msg's & resend an ESCP msg  */
+
+         DCL INSPTR RSNDRTN AUTO;
+
+         CALLI      MOVMSGS,*,MOVMRTN;
+         CPYBLAP    RSNMSKY,' ',' ';
+         CALLI      RSNEM,*,RSNRTN;
+         B          RSNDRTN;
+/*---------------------------------------------------------*/
+         ENTRY MOVMSGS INT;
+/*  bubble msg's up   */
+
+         DCL INSPTR MOVMRTN AUTO;
+         CPYBLAP    MPMSGKY,' ',' ';
+         CPYBLAP    MPMTYPS(1),'*COMP',' ';
+         CPYBLAP    MPMTYPS(2),'*DIAG',' ';
+         CPYBLAP    MPMTYPS(3),'*INFO',' ';
+         CPYNV      MPM#TYP,3;
+         CALLI      MOVPM,*,MPMRTN;
+         B          MOVMRTN;
+/*---------------------------------------------------------*/
+         ENTRY RMVPM INT;
+/*  remove pgm msg's API  */
+
+         DCL INSPTR RMVPRTN AUTO;
+         DCL DD RVMSGQNM  CHAR(10) AUTO INIT('*');
+         DCL DD RVSTKCNT   BIN( 4) AUTO INIT(0);
+         DCL DD RVMSGKEY  CHAR( 4) AUTO;
+         DCL DD RVMS2RMV  CHAR(10) AUTO;
+
+         DCL SPCPTR RMV1  AUTO INIT(RVMSGQNM);
+         DCL SPCPTR RMV2  AUTO INIT(RVSTKCNT);
+         DCL SPCPTR RMV3  AUTO INIT(RVMSGKEY);
+         DCL SPCPTR RMV4  AUTO INIT(RVMS2RMV);
+         DCL SPCPTR RMV5  AUTO INIT(ERRCODE );
+         DCL OL RMVOL (RMV1, RMV2, RMV3, RMV4,  RMV5);
+         DCL SYSPTR RMVSYP AUTO INIT('QMHRMVPM', CTX('QSYS'), TYPE(PGM,1));
+
+         CALLX      RMVSYP,RMVOL,*;
+         B RMVPRTN;
+/*---------------------------------------------------------*/
+         ENTRY GETCMD  INT;
+/*  Get SYP to the *CMD     */
+
+         DCL INSPTR GCMDRTN AUTO;
+         DCL DD GCMDRETC CHAR(8) AUTO;
+         DCL EXCM BADLIBEX EXCID(H'2200') BP(BADLIB) SKP;
+         DCL EXCM BADOBJEX EXCID(H'2200') BP(BADOBJ) SKP;
+         DCL EXCM BADLAUEX EXCID(H'0A00') BP(BADLAUT) SKP;
+         DCL EXCM BADOAUEX EXCID(H'0A00') BP(BADOAUT) SKP;
+         DCL EXCM LIBNAMEX EXCID(H'0000') BP(NOLIBNM) SKP;
+         DCL EXCM DOMNERRX EXCID(H'4400') BP(DOMNERR) SKP;
+
+         CPYBLAP    GCMDRETC,' ',' ';
+         CPYBWP     CMDLSYP,*;
+         CPYBWP     CMDSYP,*;
+         CMPBLAP(B) UCMDLI,' '    ,' '/EQ(NOLIB);
+         CMPBLAP(B) UCMDLI,'*LIBL',' '/EQ(NOLIB);
+/* here if library specified */
+         CMPBLAP(B) UCMDLI,'QTEMP',' '/NEQ(NOTQTEMP);
+/* here if library is QTEMP */
+         SETSPFP    CMDLSYP,QTEMPPTR;
+         B          GOTLIB;
+NOLIB:
+         CMPBLAP(B) $CMDNM,' ',' '/EQ(BADOBJ);
+/* get ptr to cmd, no lib   */
+         MODEXCPD   BADOBJEX,HANDLE,OP2ISCON;
+         CPYBLA     TYPESUB,X'1905'                 /* *CMD */;
+         CPYBLAP    OBJNAM,$CMDNM,' ';
+         RSLVSP     CMDSYP,OBJDESC,*,*;
+         MODEXCPD   BADOBJEX,SKIP,OP2ISCON;
+/* get library name, if possible  */
+         MODEXCPD   LIBNAMEX,HANDLE,OP2ISCON;
+         MATPTR     MTPTRPTR,CMDSYP;
+         MODEXCPD   LIBNAMEX,SKIP,OP2ISCON;
+         CPYBLA     UCMDLI,MTSYCTXN;
+         B          NOTQTEMP;
+NOLIBNM:
+         MODEXCPD   LIBNAMEX,SKIP,OP2ISCON;
+         B          GOTLIB;
+NOTQTEMP:
+         CPYBLAP    OBJNAM,UCMDLI,' ';
+/* get library ptr  */
+         MODEXCPD   BADLIBEX,HANDLE,OP2ISCON;
+         CPYBLA     TYPESUB,X'0401'                 /* *LIB */;
+         RSLVSP     CMDLSYP,OBJDESC,*,*;
+         MODEXCPD   BADLIBEX,SKIP,OP2ISCON;
+GOTLIB:
+         CMPPTRT(B) CMDSYP,*/NEQ(GOTCMD);
+         CMPBLAP(B) $CMDNM,' ',' '/EQ(BADOBJ);
+/* get ptr to cmd in lib   */
+         MODEXCPD   BADLAUEX,HANDLE,OP2ISCON;
+         MODEXCPD   BADOBJEX,HANDLE,OP2ISCON;
+         CPYBLA     TYPESUB,X'1905'                 /* *CMD */;
+         CPYBLAP    OBJNAM,$CMDNM,' ';
+         RSLVSP     CMDSYP,OBJDESC,CMDLSYP,*;
+         MODEXCPD   BADLAUEX,SKIP,OP2ISCON;
+         MODEXCPD   BADOBJEX,SKIP,OP2ISCON;
+GOTCMD:
+/* materialize space attr's  */
+         MODEXCPD   DOMNERRX,HANDLE,OP2ISCON;
+         MATS       MATSTMPP,CMDSYP;
+         MODEXCPD   DOMNERRX,SKIP,OP2ISCON;
+         CPYNV      CMDSIZE,MATSSIZ;
+
+/* copy the cmd to the user space  */
+
+/* the command space:  */
+         DCL SPCPTR WCMDSPP AUTO;
+         DCL DD  CMDSPAC CHAR(1048576) BAS(WCMDSPP);
+
+/* the user space:  */
+         DCL SPCPTR WUSPSPP AUTO;
+         DCL DD  USRSPAC CHAR(1048576) BAS(WUSPSPP);
+
+         SETSPPFP   WCMDSPP,CMDSYP;
+         SETSPPFP   WUSPSPP,USPSPP;
+         CPYBLA     USRSPAC(1:CMDSIZE),CMDSPAC(1:CMDSIZE);
+         B          GCMDEND;
+
+/*  If Domain error MCH6801, call pgm to get cmd from splf  */
+/*   (happens at QSECURITY 40 & above)                      */
+
+DOMNERR:
+         MODEXCPD   DOMNERRX,SKIP,OP2ISCON;
+         CALLI      GETSPLF,*,GSPRTN;
+         B          GCMDEND;
+/*-------------------*/
+BADOBJ:
+         CPYBLAP    GCMDRETC,'CMD.NF',' ';
+         B          GCMDEND;
+BADLIB:
+         CPYBLAP    GCMDRETC,'LIBR.NF',' ';
+         B          GCMDEND;
+BADLAUT:
+         CPYBLAP    GCMDRETC,'LIB.AUT',' ';
+         B          GCMDEND;
+BADOAUT:
+         CPYBLAP    GCMDRETC,'CMD.AUT',' ';
+         B          GCMDEND;
+GCMDEND:
+         MODEXCPD   BADOBJEX,SKIP,OP2ISCON;
+         MODEXCPD   BADLIBEX,SKIP,OP2ISCON;
+         MODEXCPD   BADLAUEX,SKIP,OP2ISCON;
+         MODEXCPD   BADOAUEX,SKIP,OP2ISCON;
+         B          GCMDRTN;
+/*---------------------------------------------------------*/
+         ENTRY GETSPLF INT;
+/*  Call pgm to dump cmd & copy from splf  */
+
+         DCL INSPTR GSPRTN AUTO;
+         DCL DD RCCMDLIB  CHAR( 20) AUTO;
+         DCL DD RCFILLIB  CHAR( 20) AUTO;
+         DCL DD RCMBR     CHAR( 10) AUTO;
+         DCL DD RCTEXT    CHAR( 50) AUTO;
+
+         DCL SPCPTR RTVC1 AUTO INIT(RCCMDLIB);
+         DCL SPCPTR RTVC2 AUTO INIT(RCFILLIB);
+         DCL SPCPTR RTVC3 AUTO INIT(RCMBR);
+         DCL SPCPTR RTVC4 AUTO INIT(RCTEXT);
+         DCL OL RTVCOL (RTVC1, RTVC2, RTVC3, RTVC4);
+         DCL SYSPTR RTVCSYP AUTO INIT('RTVCMDC', TYPE(PGM,1));
+
+/*  (Note that parms to RTVCMDC are used for double-duty)  */
+         CPYBLA     RCCMDLIB( 1:10), $CMDNM;
+         CPYBLA     RCCMDLIB(11:10), $CMDLI;
+         CPYBLA     RCFILLIB( 1:10), CUSPNAME;
+         CPYBLA     RCFILLIB(11:10), CUSPLIBR;
+         CPYBLAP    RCMBR, '*DUMPCMD',' ';
+         CALLX      RTVCSYP,RTVCOL,*;
+
+         B          GSPRTN;
+/*---------------------------------------------------------*/
+         ENTRY MOVPM INT;
+/*  Move pgm msg's API          */
+
+         DCL INSPTR MPMRTN AUTO;
+         DCL DD MPMSGKY    CHAR( 4) AUTO;
+         DCL DD MPMTYPS(4) CHAR(10) AUTO;
+         DCL DD MPM#TYP     BIN( 4) AUTO;
+         DCL DD MPMMSGQ    CHAR(10) AUTO INIT('*');
+         DCL DD MPMSTK#     BIN( 4) AUTO INIT( 1);
+
+         DCL SPCPTR MPM1 AUTO INIT(MPMSGKY);
+         DCL SPCPTR MPM2 AUTO INIT(MPMTYPS);
+         DCL SPCPTR MPM3 AUTO INIT(MPM#TYP);
+         DCL SPCPTR MPM4 AUTO INIT(MPMMSGQ);
+         DCL SPCPTR MPM5 AUTO INIT(MPMSTK#);
+         DCL SPCPTR MPM6 AUTO INIT(ERRCODE );
+         DCL OL MPMOL (MPM1, MPM2, MPM3, MPM4, MPM5, MPM6);
+         DCL SYSPTR MPMSYP AUTO INIT('QMHMOVPM', CTX('QSYS'), TYPE(PGM,1));
+
+         CALLX      MPMSYP,MPMOL,*;
+         B          MPMRTN;
+/*---------------------------------------------------------*/
+         ENTRY RSNEM INT;
+/*  Resend escape msg API       */
+
+         DCL INSPTR RSNRTN AUTO;
+         DCL DD RSNMSKY  CHAR( 4) AUTO;
+
+         DCL SPCPTR RSN1 AUTO INIT(RSNMSKY);
+         DCL SPCPTR RSN2 AUTO INIT(ERRCODE );
+         DCL OL RSNOL (RSN1, RSN2);
+         DCL SYSPTR RSNSYP AUTO INIT('QMHRSNEM', CTX('QSYS'), TYPE(PGM,1));
+
+         CALLX      RSNSYP,RSNOL,*;
+         B          RSNRTN;
+/*---------------------------------------------------------*/
+         ENTRY JOBI INT;
+/*  Retrieve job info API       */
+
+         DCL INSPTR JBIRTN AUTO;
+         DCL DD JBIRCVL   BIN( 4) AUTO INIT(76);
+         DCL DD JBIFMTNM CHAR(10) AUTO INIT('JOBI0700');
+         DCL DD JBIJOBNM CHAR(10) AUTO INIT('*');
+         DCL DD JBIJOBUS CHAR(10) AUTO INIT;
+         DCL DD JBIJOBNO CHAR( 6) AUTO INIT;
+         DCL DD JBIJOBID CHAR(16) AUTO INIT;
+
+         DCL DD JOBI0700 CHAR(76) AUTO;
+         DCL DD J07BYTRTN BIN( 4) DEF(JOBI0700) POS(  1) INIT( 0);
+         DCL DD J07BYTAVL BIN( 4) DEF(JOBI0700) POS(  5) INIT(76);
+         DCL DD J07CURLIB BIN( 4) DEF(JOBI0700) POS( 73);
+
+         DCL SPCPTR JBI1 AUTO INIT(JOBI0700);
+         DCL SPCPTR JBI2 AUTO INIT(JBIRCVL );
+         DCL SPCPTR JBI3 AUTO INIT(JBIFMTNM);
+         DCL SPCPTR JBI4 AUTO INIT(JBIJOBNM);
+         DCL SPCPTR JBI5 AUTO INIT(JBIJOBID);
+         DCL SPCPTR JBI6 AUTO INIT(ERRCODE );
+         DCL OL JBIOL (JBI1, JBI2, JBI3, JBI4, JBI5, JBI6);
+         DCL SYSPTR JBISYP AUTO INIT('QUSRJOBI', CTX('QSYS'), TYPE(PGM,1));
+
+         CALLX      JBISYP,JBIOL,*;
+         B          JBIRTN;
+/*---------------------------------------------------------*/
+         ENTRY CRUSRSPC INT;
+/*  Create a user space, if not already,  */
+/*  & set USPSPP to address it.           */
+
+         DCL INSPTR USPRTN AUTO;
+         DCL DD USPNMLI CHAR( 20) AUTO;
+         DCL DD USPNAME   CHAR( 10) DEF(USPNMLI) POS( 1);
+         DCL DD USPLIBR   CHAR( 10) DEF(USPNMLI) POS(11);
+
+         DCL DD USPATTR CHAR( 10) AUTO;
+         DCL DD USPSIZE  BIN(  4) AUTO BDRY(4);
+         DCL DD USPIVAL CHAR(  1) AUTO;
+         DCL DD USPPAUT CHAR( 10) AUTO;
+         DCL DD USPTEXT CHAR( 50) AUTO;
+         DCL DD USPREPL CHAR( 10) AUTO;
+         DCL DD USRTLIB CHAR( 10) AUTO;
+
+         DCL DD USCHATT CHAR( 13) AUTO BDRY(4);
+         DCL DD USNRECS    BIN(  4) DEF(USCHATT) POS( 1);
+         DCL DD USCHKEY    BIN(  4) DEF(USCHATT) POS( 5);
+         DCL DD USDATLN    BIN(  4) DEF(USCHATT) POS( 9);
+         DCL DD USAUTEX   CHAR(  1) DEF(USCHATT) POS(13);
+
+         DCL SPCPTR USPSPP1 AUTO INIT(USPNMLI);
+         DCL SPCPTR USPSPP2 AUTO INIT(USPATTR);
+         DCL SPCPTR USPSPP3 AUTO INIT(USPSIZE);
+         DCL SPCPTR USPSPP4 AUTO INIT(USPIVAL);
+         DCL SPCPTR USPSPP5 AUTO INIT(USPPAUT);
+         DCL SPCPTR USPSPP6 AUTO INIT(USPTEXT);
+         DCL SPCPTR USPSPP7 AUTO INIT(USPREPL);
+         DCL SPCPTR USPSPP8 AUTO INIT(ERRCODE);
+         DCL OL USPOL (USPSPP1,USPSPP2,USPSPP3,USPSPP4,
+                       USPSPP5,USPSPP6,USPSPP7,USPSPP8);
+         DCL SYSPTR USPSYP AUTO INIT('QUSCRTUS', CTX('QSYS'), TYPE(PGM,1));
+
+         DCL SPCPTR CUSAT1 AUTO INIT(USRTLIB);
+         DCL SPCPTR CUSAT2 AUTO INIT(USPNMLI);
+         DCL SPCPTR CUSAT3 AUTO INIT(USCHATT);
+         DCL SPCPTR CUSAT4 AUTO INIT(ERRCODE);
+         DCL OL CUSATOL (CUSAT1, CUSAT2, CUSAT3, CUSAT4);
+         DCL SYSPTR CUSATSYP AUTO INIT('QUSCUSAT', CTX('QSYS'), TYPE(PGM,1));
+
+         DCL SPCPTR USPP1 AUTO INIT(USPNMLI);
+         DCL SPCPTR USPP2 AUTO INIT(USPSPP);
+         DCL SPCPTR USPP3 AUTO INIT(ERRCODE);
+         DCL OL USPPOL (USPP1,USPP2,USPP3);
+         DCL SYSPTR USPPSYP AUTO INIT('QUSPTRUS', CTX('QSYS'), TYPE(PGM,1));
+
+         CPYBLAP    USPATTR,' ',' ';
+         CPYBLA     USPIVAL,X'00';
+         CPYBLAP    USPPAUT,'*USE',' ';
+         CPYBLAP    USPTEXT,' ',' ';
+         CPYBLAP    USPREPL,'*NO',' ';
+
+/*  create user space  */
+         CALLX      USPSYP,USPOL,*;
+
+/*  change attributes to "automatically extendible"  */
+         CPYNV      USNRECS, 1;
+         CPYNV      USCHKEY, 3;
+         CPYNV      USDATLN, 1;
+         CPYBLA     USAUTEX, '1';
+         CALLX      CUSATSYP,CUSATOL,*;
+
+/*  get SPP to user space  */
+         CALLX      USPPSYP,USPPOL,*;
+         B          USPRTN;
+/*----------------------------------------------------------------*/
+         DCL EXCM BADCPFX EXCID(H'0000') BP(BADCPF) CV('CPF') SKP;
+         DCL EXCM BADMCHX EXCID(H'0000') BP(BADMCH) CV('MCH') SKP;
+/*----------------------------------------------------------------*/
+         PEND;

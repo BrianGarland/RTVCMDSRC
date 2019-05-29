@@ -1,0 +1,177 @@
+.*================================================================
+.*  RTVCMD -- Retrieve Command Source
+.*================================================================
+.*
+.*  1997/10/15
+.*
+.*  Dave McKenzie
+.*  the zbig group, inc.
+.*
+.*  Internet:     davemck@zbiggroup.com
+.*
+.*  This software is hereby placed in the public domain.
+.*
+.*  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR DIRECT, INDIRECT,
+.*  SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF
+.*  THE USE OF THIS SOFTWARE.
+.*
+.*  THE AUTHOR SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING,
+.*  BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+.*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
+.*  AND NON-INFRINGEMENT.  THIS SOFTWARE IS PROVIDED ON AN "AS IS"
+.*  BASIS, AND THE AUTHOR HAS NO OBLIGATION TO PROVIDE MAINTENANCE,
+.*  SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+.*================================================================
+:PNLGRP.
+:HELP name='RCS'.
+:P.
+The Retrieve Command Source command retrieves source statements from commands
+into a source file.  Both IBM-supplied commands and user-defined commands
+may be retrieved.
+:EHELP.
+
+:HELP name='RCS/CMD'.
+Command (CMD) - Help
+:XH3.Command (CMD)
+:P.
+Specifies the name and library of the command.
+:P.
+The possible library values are:
+:PARML.
+:PT.:PK def.*LIBL:EPK.
+:PD.The library list is used to locate the command.
+:PT.*CURLIB
+:PD.The current library for the job is used to locate the command.  If no
+library is specified as the current library for the job, QGPL is used.
+:PT.library-name
+:PD.Specify the library where the command is located.
+:EPARML.
+:EHELP.
+
+:HELP name='RCS/SRCFILE'.
+Source file (SRCFILE) - Help
+:XH3.Source file (SRCFILE)
+:P.
+Specifies the name and library of the database source file to which the source
+statements will be written.
+:P.
+The possible library values are:
+:PARML.
+:PT.:PK def.*LIBL:EPK.
+:PD.The library list is used to locate the source file.
+:PT.*CURLIB
+:PD.The current library for the job is used to locate the source file.  If no
+library is specified as the current library for the job, QGPL is used.
+:PT.library-name
+:PD.Specify the library where the source file is located.
+:EPARML.
+:EHELP.
+
+:HELP name='RCS/SRCMBR'.
+Source member (SRCMBR) - Help
+:XH3.Source member (SRCMBR)
+:P.
+Specifies the name of the source file member to which the source statements
+will be written.  If the name is not specified, the command name is used.  If
+the member existed before the command was run, it is cleared before any
+source statements are written into it.  If the member did not exist, it is
+created.
+:P.
+:PARML.
+:PT.:PK def.*CMD:EPK.
+:PD.The name of the command is used as the member name.
+:PT.member-name
+:PD.Specify the name of the source file member to which the source statements
+will be written.
+:EPARML.
+:EHELP.
+
+:HELP name='RCS/PROMPT'.
+Prompt text or msg IDs (PROMPT) - Help
+:XH3.Prompt text or msg IDs (PROMPT)
+:P.
+Specifies whether to retrieve text or message ID's for PROMPT and CHOICE
+parameters.
+:NT.
+A separate command, RTVCMDMSG, is provided to retrieve prompt text
+which was derived from message descriptions when the command was
+created.  RTVCMDMSG will create source for a CL program containing
+ADDMSGD commands to reconstruct a message file with the prompt
+messages.
+:ENT.
+:P.
+The possible values are:
+:PARML.
+:PT.:PK def.*TEXT:EPK.
+:PD.Retrieve prompt text in quoted strings.
+:PT.*MSG
+:PD.Retrieve the message ID's from which the prompt text was derived, if any.
+:EPARML.
+:EHELP.
+
+.**********************************************************************
+:HELP name='RCM'.
+:P.
+The Retrieve Command Messages command retrieves message descriptions from
+commands, for PROMPT and CHOICE parameters in which prompt text was derived
+from message descriptions when the command was created.  Source will be
+created for a CL program containing ADDMSGD commands to reconstruct
+a message file with the prompt messages.
+:EHELP.
+
+:HELP name='RCM/CMD'.
+Command (CMD) - Help
+:XH3.Command (CMD)
+:P.
+Specifies the name and library of the command.
+:P.
+The possible library values are:
+:PARML.
+:PT.:PK def.*LIBL:EPK.
+:PD.The library list is used to locate the command.
+:PT.*CURLIB
+:PD.The current library for the job is used to locate the command.  If no
+library is specified as the current library for the job, QGPL is used.
+:PT.library-name
+:PD.Specify the library where the command is located.
+:EPARML.
+:EHELP.
+
+:HELP name='RCM/SRCFILE'.
+Source file (SRCFILE) - Help
+:XH3.Source file (SRCFILE)
+:P.
+Specifies the name and library of the database source file to which the source
+statements will be written.
+:P.
+The possible library values are:
+:PARML.
+:PT.:PK def.*LIBL:EPK.
+:PD.The library list is used to locate the source file.
+:PT.*CURLIB
+:PD.The current library for the job is used to locate the source file.  If no
+library is specified as the current library for the job, QGPL is used.
+:PT.library-name
+:PD.Specify the library where the source file is located.
+:EPARML.
+:EHELP.
+
+:HELP name='RCM/SRCMBR'.
+Source member (SRCMBR) - Help
+:XH3.Source member (SRCMBR)
+:P.
+Specifies the name of the source file member to which the source statements
+will be written.  If the name is not specified, the command name is used.  If
+the member existed before the command was run, it is cleared before any
+source statements are written into it.  If the member did not exist, it is
+created.
+:P.
+:PARML.
+:PT.:PK def.*CMD:EPK.
+:PD.The name of the command is used as the member name.
+:PT.member-name
+:PD.Specify the name of the source file member to which the source statements
+will be written.
+:EPARML.
+:EHELP.
+:EPNLGRP.

@@ -1,0 +1,256 @@
+      *================================================================
+      *  RTVCMD -- Retrieve Command Source
+      *================================================================
+      *
+      *  2001/8/25
+      *
+      *  Dave McKenzie
+      *  the zbig group, inc.
+      *
+      *  Internet:     davemck@zbiggroup.com
+      *
+      *  This software is hereby placed in the public domain.
+      *
+      *  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR DIRECT, INDIRECT,
+      *  SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF
+      *  THE USE OF THIS SOFTWARE.
+      *
+      *  THE AUTHOR SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING,
+      *  BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+      *  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
+      *  AND NON-INFRINGEMENT.  THIS SOFTWARE IS PROVIDED ON AN "AS IS"
+      *  BASIS, AND THE AUTHOR HAS NO OBLIGATION TO PROVIDE MAINTENANCE,
+      *  SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+      *================================================================
+     FRTVCMDSFIF  F     132            DISK                           UC
+     FSRC     O   F     144            DISK         KINFDS SINFDS     UC
+     E                    LRY       132  1
+     E                    CH8         8  8
+     E                    HXC        32  2
+     E                    BYT        32  1
+     IRTVCMDSFAA  01
+     I                                       12  19 CH81
+     I                                       21  28 CH82
+     I                                       30  37 CH83
+     I                                       39  46 CH84
+     I                                       50  57 CH85
+     I                                       59  66 CH86
+     I                                       68  75 CH87
+     I                                       77  84 CH88
+     I                                        1   1 POS1
+     I                                        1   2 POS12
+     I                                        1   8 POS18
+     I                                        2   2 POS2
+     I                                        3   9 POS39
+     I                                       15  15 POS15
+     I                                       16  21 LFROM
+     I                                       20  20 POS20
+     I                                       32  37 LTO
+     ISINFDS      DS
+     I                                    B 125 1260SRECL
+     I            DS
+     I                                        1   50ZRECL
+     I            DS
+     I                                    B   1   20BIN2
+     I                                        2   2 BIN2R
+     I            DS
+     I                                    B   1   20BYTE
+     I                                        2   2 BYTER
+     I            DS
+     I                                    B   1   40USLENG
+     I                                    B   5   80USSPOS
+     IUSRSPC      DS
+     I                                        1  10 USNAME
+     I                                       11  20 USLIBR
+     I           SDS
+     I                                       37  390##PARM
+     C           *ENTRY    PLIST
+     C                     PARM           LIN   132
+     C                     PARM           USRSPC
+     C                     PARM           POPER   8
+     C                     PARM           PRETC   8
+      *
+     C           ##PARM    IFGE 3                          ? 3 PARMS
+     C                     MOVELPOPER     OPER    8
+     C                     ELSE                            X 3 PARMS
+     C                     MOVEL'WRSRC   'OPER
+     C                     END                             E 3 PARMS
+      *
+     C           OPER      IFEQ 'COPYSPLF'                 ? COPYSPLF
+     C                     EXSR CPYSPL
+     C                     SETON                     LR
+     C                     END                             E COPYSPLF
+      *
+     C           OPER      IFEQ 'OPNSRC  '                 ? OPNSRC
+     C                     EXSR OPNSRC
+     C                     END                             E OPNSRC
+      *
+     C           OPER      IFEQ 'WRSRC   '                 ? WRSRC
+     C                     EXSR WRSRC
+     C                     END                             E WRSRC
+      *
+     C                     RETRN
+      *----------------------------------------------------------------
+     C           OPNSRC    BEGSR
+      *  Open srcfile
+     C                     OPEN SRC
+     C                     Z-ADDSRECL     ZRECL
+     C                     MOVELZRECL     PRETC
+     C                     ENDSR
+      *----------------------------------------------------------------
+     C           WRSRC     BEGSR
+      *  Write a rec to srcfile
+      *
+     C           SRCSEQ    IFEQ 0
+     C                     Z-ADD1.00      SRCSEQ  62
+     C                     BITOF'01234567'NULL    1
+     C                     END
+      *
+      *  replace x'00's with blanks
+     C                     MOVEALIN       LRY
+     C           1         DO   132       @X      50       D 132
+     C           LRY,@X    IFEQ NULL                       ? X'00'
+     C                     MOVE ' '       LRY,@X
+     C                     END                             E X'00'
+     C                     END                             E 132
+     C                     MOVEALRY       SRCDTA132
+      *
+     C                     Z-ADD0         SRCDAT  60
+     C                     EXCPTOUT
+     C                     ADD  1.00      SRCSEQ
+     C                     ENDSR
+      *----------------------------------------------------------------
+     C           CPYSPL    BEGSR
+      *  Copy dumped cmd from splf to usrspc
+      *
+     C                     OPEN RTVCMDSF
+     C                     Z-ADD1         USSPOS
+     C                     Z-ADD0         CNT00S
+      *  Loop thru splf
+     C           SPLEOF    DOUEQ*ON                        D SPLEOF
+     C                     READ RTVCMDSF                 77
+     C                     MOVE *IN77     SPLEOF  1
+     C           SPLEOF    IFEQ *OFF                       ? REC READ
+      *
+     C           POS18     IFEQ '  000000'                 ? 000000
+     C                     ADD  1         CNT00S  50
+     C           CNT00S    IFEQ 2                          ? 2ND 000000
+     C                     MOVE 'Y'       INDATA  1
+     C                     END                             E 2ND 000000
+     C                     END                             E 000000
+      *
+     C           POS1      IFEQ '.'                        ? .POINTERS
+     C           POS2      ANDNE' '
+     C                     MOVE 'N'       INDATA
+     C                     END                             E .POINTERS
+      *
+     C           INDATA    IFEQ 'Y'                        ? DATA LINE
+     C           POS12     ANDEQ*BLANKS
+     C           POS39     ANDNE*BLANKS
+      *
+      *  If "LINES xxxxxx TO xxxxxx SAME AS ABOVE",
+      *  write dup lines (still in BYT array)
+     C           POS15     IFEQ ' '                        ? SAME
+     C           POS20     ANDNE' '
+     C                     MOVEL*ALL'0'   EIGHT
+     C                     MOVE LFROM     EIGHT
+     C                     EXSR HTODEC
+     C                     Z-ADDDECMAL    DFROM  110
+     C                     MOVEL*ALL'0'   EIGHT
+     C                     MOVE LTO       EIGHT
+     C                     EXSR HTODEC
+     C           DECMAL    ADD  1         DTO    110
+     C           DTO       SUB  DFROM     #LINES  50
+     C                     DIV  32        #LINES
+      *
+     C                     DO   #LINES                     D #LINES
+     C                     EXSR WRUSPC
+     C                     END                             E #LINES
+      *
+      *  ...else write the single line
+     C                     ELSE                            X SAME
+     C                     EXSR CVTLIN
+     C                     EXSR WRUSPC
+     C                     END                             E SAME
+     C                     END                             E DATA LINE
+     C                     END                             E REC READ
+     C                     END                             E SPLEOF
+      *
+     C                     CLOSERTVCMDSF
+     C                     ENDSR
+      *----------------------------------------------------------------
+     C           CVTLIN    BEGSR
+      *  Convert the hex-char line to bytes in BYT array
+      *
+     C                     MOVE CH81      CH8,1
+     C                     MOVE CH82      CH8,2
+     C                     MOVE CH83      CH8,3
+     C                     MOVE CH84      CH8,4
+     C                     MOVE CH85      CH8,5
+     C                     MOVE CH86      CH8,6
+     C                     MOVE CH87      CH8,7
+     C                     MOVE CH88      CH8,8
+     C                     MOVEACH8       HXC
+      *
+      *  Convert hex chars to bytes
+     C           1         DO   32        B       30       D 32
+     C                     MOVE HXC,B     HEX2    2
+     C                     MOVELHEX2      HEXCHR  1
+     C                     EXSR HX2BYT
+     C           BIN2      MULT 16        BYTE
+     C                     MOVE HEX2      HEXCHR
+     C                     EXSR HX2BYT
+     C                     ADD  BIN2      BYTE
+     C                     MOVE BYTER     BYT,B
+     C                     END                             E 32
+     C                     ENDSR
+      *----------------------------------------------------------------
+     C           WRUSPC    BEGSR
+      *  Write BYT array to usrspc
+      *
+     C                     Z-ADD32        USLENG
+     C                     CALL 'QUSCHGUS'
+     C                     PARM           USRSPC
+     C                     PARM           USSPOS
+     C                     PARM           USLENG
+     C                     PARM           BYT
+     C                     PARM '0'       USFORC  1
+      *
+     C                     ADD  USLENG    USSPOS
+     C                     ENDSR
+      *----------------------------------------------------------------
+     C           HX2BYT    BEGSR
+      *  Convert hex char in HEXCHR to binary in BIN2
+      *
+     C                     Z-ADD0         BIN2
+     C                     MOVE HEXCHR    BIN2R
+     C                     BITOF'0123'    BIN2R
+     C           HEXCHR    IFLE 'F'                        D A-F
+     C                     ADD  9         BIN2
+     C                     END                             E A-F
+     C                     ENDSR
+      *----------------------------------------------------------------
+     C           HTODEC    BEGSR
+      *  Converts the hex char # in EIGHT to a decimal # in DECMAL.
+      *
+     C                     MOVE EIGHT     EIGHT   8
+     C                     MOVE EIGHT     WK8     8
+     C                     Z-ADD0         DECMAL 110
+      *
+     C                     DO   8                          D 8 TIMES
+     C                     Z-ADD0         NWK3    30
+     C                     MOVELWK8       WK1     1
+     C                     MOVE WK1       NWK3
+     C                     TESTB'2'       WK1            51
+     C  N51                ADD  9         NWK3
+     C                     MULT 16        DECMAL
+     C                     ADD  NWK3      DECMAL
+     C                     MOVE WK8       WK7     7
+     C                     MOVELWK7       WK8
+     C                     END                             E 8 TIMES
+     C                     ENDSR
+      *----------------------------------------------------------------
+     OSRC     E                OUT
+     O                         SRCSEQ     6
+     O                         SRCDAT    12
+     O                         SRCDTA   144
